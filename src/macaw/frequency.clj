@@ -4,56 +4,113 @@
    [clojure.string :as string]
    [clj-fuzzy.stemmers :as stem]))
 
-(def frequency-list "resources/frequencies/english.txt")
+(def log-of-2 (Math/log 2))
 
-(defn stemmize
-  [s]
-  (let [tokens (string/split s #"[ -_]+")
-        stems (map stem/porter tokens)]
-    (set stems)))
+(defn log2
+  [n]
+  (/ (Math/log n) log-of-2))
 
-(defn match-all-stems?
-  [canon hopeful]
-  (= canon (set/intersection canon (stemmize hopeful))))
+(defn tokenize
+  [pod]
+  (map
+   string/lower-case
+   (re-seq #"[^ \n\r\t]+" pod)))
 
-(defn parse-frequency
-  [line]
-  (let [[word frequency] (string/split line #" ")]
-    [word (Integer/parseInt frequency)]))
+(defn ignoring?
+  [token]
+  (re-find #"^@|^#|^https?:" token))
 
-(defn load-frequencies
-  []
-  (let [raw (slurp frequency-list)
-        lines (string/split raw #"\r\n")]
-    (into {} (map parse-frequency lines))))
+(defn clean-token
+  [token]
+  (let [clean (string/replace token #"[^a-z0-9'-]" "")]
+    clean))
 
-(defn group-stems
+(defn tokenize-stream
+  [stream]
+  (remove
+   empty?
+   (map
+    clean-token
+    (remove
+     ignoring?
+     (mapcat tokenize stream)))))
+
+(defn token-frequencies
+  [stream]
+  (frequencies
+   (tokenize-stream stream)))
+
+(defn mass-frequencies
+  [mass]
+  (into
+   {}
+   (map
+    (fn [[id stream]]
+      [id (token-frequencies stream)])
+    mass)))
+
+(defn total-appearances
   [freqs]
-  (let [groups (group-by (comp stem/porter first) freqs)]
+  (frequencies
+   (mapcat
+    keys
+    (vals freqs))))
+
+(defn merge-frequencies
+  [mass]
+  (reduce
+   (fn [merged freq]
+     (merge-with + merged freq))
+   {} (vals mass)))
+
+(defn scale-frequencies
+  [freqs]
+  (let [most (first (sort > (vals freqs)))]
     (into
      {}
      (map
-      (fn [[stem freqs]]
-        [stem (reduce + (map last freqs))])
-      groups))))
+      (fn [[token freq]]
+        [token (int (Math/floor (- 0.5 (log2 (/ freq most)))))])
+      freqs))))
 
-(defn scale-stems
-  [stems]
-  (let [rank (sort-by last > stems)
-        highest (-> rank first last)]
-    (into
-     {}
+(defn scale-mass
+  [mass]
+  (let [freqs (merge-frequencies mass)]
+    (scale-frequencies freqs)))
+
+(defn compare-frequencies
+  [a b]
+  (let [common (set/intersection (set (keys a)) (set (keys b)))
+        a-common (select-keys a common)
+        b-common (select-keys b common)
+        joint (merge-with vector a-common b-common)
+        discrepancies (filter (fn [[token [a b]]] (not= a b)) joint)
+        sorted (sort-by (fn [[token [a b]]] (- b a)) > discrepancies)]
+    sorted))
+
+(defn progressive-filter
+  [classes desired level bottom]
+  (loop [level level]
+    (let [found
+          (filter
+           (fn [[token [a b]]]
+             (>= a level))
+           classes)]
+      (if (and (< (count found) desired) (> level bottom))
+        (recur (dec level))
+        found))))
+
+(defn compare-masses
+  [freqs a]
+  (let [a-mass (select-keys freqs a)
+        b-mass (apply dissoc freqs a)
+        a-freqs (scale-mass a-mass)
+        b-freqs (scale-mass b-mass)
+        compared (compare-frequencies a-freqs b-freqs)
+        appearances (total-appearances a-mass)]
+    (sort-by
+     last >
      (map
-      (fn [[stem freq]]
-        [stem (float (/ freq highest))])
-      rank))))
-
-(defn parse-line
-  [line]
-  (let [tokens (re-seq #"[a-zA-Z']" line)]))
-
-(defn count-line
-  [freqs line]
-  (let [tokens (parse-line line)]
-    (merge-with + freqs (frequencies tokens))))
-
+      (fn [[token [a b]]]
+        [token (* (get appearances token) (- b a))])
+      (progressive-filter compared 5 6 3)))))
