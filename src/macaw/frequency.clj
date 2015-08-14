@@ -108,9 +108,21 @@
         b-freqs (scale-mass b-mass)
         compared (compare-frequencies a-freqs b-freqs)
         appearances (total-appearances a-mass)]
-    (sort-by
-     last >
+    (map
+     first
+     (sort-by
+      last >
+      (map
+       (fn [[token [a b]]]
+         [token (* (get appearances token) (- b a))])
+       (progressive-filter compared 5 6 3))))))
+
+(defn extract-distinct-tokens
+  [mass submasses]
+  (let [freqs (mass-frequencies mass)]
+    (into
+     {}
      (map
-      (fn [[token [a b]]]
-        [token (* (get appearances token) (- b a))])
-      (progressive-filter compared 5 6 3)))))
+      (fn [[id submass]]
+        [id (compare-masses freqs submass)])
+      submasses))))
