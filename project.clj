@@ -1,4 +1,4 @@
-(defproject aviary/macaw "0.0.4"
+(defproject aviary/macaw "0.0.5"
   :description "analyze word corpuses for distinctnesses"
   :url "http://github.com/littlebird/macaw"
   :license {:name "Eclipse Public License"
