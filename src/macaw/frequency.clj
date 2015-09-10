@@ -18,22 +18,23 @@
 
 (defn ignoring?
   [token]
-  (re-find #"^@|^#|^https?:" token))
+  (re-find #"^@|^#|^https?:|['\"0-9]" token))
 
 (defn clean-token
   [token]
-  (let [clean (string/replace token #"[\"~`!@#$%^*()+=_:;<>,.?/|\\]" "")]
+  (let [clean (string/replace token #"[\"~`!@#$%^*()\[\]+=_:;<>,.?/|\\]" "")]
     clean))
 
 (defn tokenize-stream
   [stream]
-  (remove
-   empty?
-   (map
-    clean-token
+  (if (seq? stream)
     (remove
-     ignoring?
-     (mapcat tokenize stream)))))
+     empty?
+     (map
+      clean-token
+      (remove
+       ignoring?
+       (mapcat tokenize stream))))))
 
 (defn token-frequencies
   [stream]
@@ -115,7 +116,7 @@
       (map
        (fn [[token [a b]]]
          [token (* (get appearances token) (- b a))])
-       (progressive-filter compared 5 6 3))))))
+       (progressive-filter compared 5 8 3))))))
 
 (defn extract-distinct-tokens
   [mass submasses]
