@@ -22,7 +22,7 @@
 
 (defn clean-token
   [token]
-  (let [clean (string/replace token #"[\"~`!@#$%^*()\[\]+=_:;<>,.?/|\\]" "")]
+  (let [clean (string/replace (name token) #"[\"~`!@#$%^*()\[\]+=_:;<>,.?/|\\]" "")]
     clean))
 
 (defn tokenize-stream
