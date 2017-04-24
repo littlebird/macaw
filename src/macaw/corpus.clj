@@ -50,7 +50,8 @@
 
 (defn parse-line
   [line]
-  (let [tokens (re-seq #"[a-zA-Z']" line)]))
+  ;;(let [tokens (re-seq #"[a-zA-Z']" line)])
+)
 
 (defn count-line
   [freqs line]
