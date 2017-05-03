@@ -4,7 +4,9 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [clj-fuzzy "0.4.0"]]
+                 [clj-fuzzy "0.1.8"]
+                ;; [clj-fuzzy "0.4.0"]
+                 ]
   :plugins [[s3-wagon-private "1.1.2"]]
   :repositories ^:replace
   [["central" {:url "http://repo1.maven.org/maven2"}]
